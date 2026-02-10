@@ -131,5 +131,5 @@ def delete_note(note_id):
 # ---------- Start the server ----------
 
 if __name__ == "__main__":
-    port = int(os.environ.get("APP_PORT"))
+    port = int(os.environ.get("APP_PORT", "8000"))
     app.run(host="0.0.0.0", port=port, debug=False)
