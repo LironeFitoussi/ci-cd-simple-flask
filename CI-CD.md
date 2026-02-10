@@ -102,15 +102,27 @@ Job בשם **`cd`**:
 - **`AWS_SECRET_ACCESS_KEY`** – ה-Secret key התואם.
 - **`AWS_REGION`** – לדוגמה: `eu-central-1` / `us-east-1`.
 
-המשתמש ב-AWS צריך לפחות הרשאות ל-EC2 עבור:
+**הרשאות IAM (לתיקון `UnauthorizedOperation`):**
 
-- `ec2:RunInstances`
-- `ec2:DescribeInstances`
-- `ec2:CreateSecurityGroup`
-- `ec2:DescribeSecurityGroups`
-- `ec2:AuthorizeSecurityGroupIngress`
-- `ec2:CreateKeyPair`
-- `ec2:DescribeKeyPairs`
+אם ה-User (למשל `GH-Actions-User`) חסר הרשאות, אפשר לצרף Policy מינימלי **מהמחשב המקומי** עם AWS CLI:
+
+```bash
+# מהשורש של הפרויקט (devops-notes-api)
+aws iam put-user-policy \
+  --user-name GH-Actions-User \
+  --policy-name DevOpsNotesEC2Policy \
+  --policy-document file://scripts/gh-actions-ec2-policy.json
+```
+
+או להריץ את הסקריפט (אם השם שונה, להעביר כ-argument):
+
+```bash
+./scripts/attach-gh-actions-policy.sh
+# או עם שם user אחר:
+./scripts/attach-gh-actions-policy.sh GH-Actions-User
+```
+
+קובץ ה-Policy: `scripts/gh-actions-ec2-policy.json` (כולל CreateSecurityGroup, RunInstances, TerminateInstances, Key Pair, וכו').
 
 #### Variables
 

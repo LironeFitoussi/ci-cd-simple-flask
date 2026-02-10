@@ -47,8 +47,6 @@ jobs:
       AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: ${{ secrets.AWS_REGION }}
       AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
-      AWS_AMI_ID: ${{ vars.AWS_AMI_ID }}
-
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -61,6 +59,26 @@ jobs:
           # See: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html
           sudo ./aws/install --bin-dir /usr/local/bin --install-dir /usr/local/aws-cli --update
           rm -rf awscliv2.zip aws
+
+      - name: Resolve latest Ubuntu AMI
+        id: ami
+        run: |
+          # מוצאים אוטומטית את ה-AMI האחרון של Ubuntu 24.04 LTS (x86_64) באזור הנוכחי
+          AMI_ID=$(aws ec2 describe-images \
+            --owners 099720109477 \
+            --filters \
+              "Name=name,Values=ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*" \
+              "Name=state,Values=available" \
+            --query "sort_by(Images, &CreationDate)[-1].ImageId" \
+            --output text)
+
+          if [ -z "$AMI_ID" ] || [ "$AMI_ID" = "None" ]; then
+            echo "Could not find Ubuntu 24.04 AMI in region ${AWS_REGION}. Check your region setting."
+            exit 1
+          fi
+
+          echo "Resolved AMI: $AMI_ID"
+          echo "AMI_ID=$AMI_ID" >> "$GITHUB_OUTPUT"
 
       - name: Prepare EC2 user data script
         run: |
@@ -108,12 +126,9 @@ jobs:
           KEY_NAME="devops-notes-api-key"
           INSTANCE_TYPE="t3.micro"
           TAG_NAME="devops-notes-api"
-          AMI_ID="${AWS_AMI_ID}"
+          AMI_ID="${{ steps.ami.outputs.AMI_ID }}"
 
-          if [ -z "$AMI_ID" ]; then
-            echo "AWS_AMI_ID variable is not set. Define it as a repository variable (Settings → Variables → Actions)."
-            exit 1
-          fi
+          echo "Launching EC2 with AMI: $AMI_ID"
 
           aws ec2 run-instances \
             --image-id "$AMI_ID" \
